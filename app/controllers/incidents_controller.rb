@@ -1,4 +1,6 @@
 class IncidentsController < ApplicationController
+  # Skip CSRF for JSON API requests, keep it for HTML forms
+  skip_before_action :verify_authenticity_token, if: :json_request?
   before_action :set_incident, only: [ :show, :edit, :update, :destroy ]
 
   def index
@@ -62,5 +64,9 @@ class IncidentsController < ApplicationController
 
   def incident_params
     params.require(:incident).permit(:title, :description, :status, :severity, :created_by, :assigned_to)
+  end
+
+  def json_request?
+    request.format.json?
   end
 end
