@@ -195,7 +195,7 @@
                             </p>
                             <% if @incident.duration %>
                               <p class="mt-0.5 text-xs text-gray-400">
-                                Resolution time: <%= time_ago_in_words(@incident.resolved_at, @incident.created_at) %>
+                                Resolution time: <%= distance_of_time_in_words(@incident.created_at, @incident.resolved_at) %>
                               </p>
                             <% end %>
                           </div>

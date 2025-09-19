@@ -39,11 +39,15 @@ class Incident < ApplicationRecord
   end
 
   def acknowledge!(user = nil)
-    update!(acknowledged_at: Time.current, assigned_to: user) if user && !acknowledged?
+    attrs = { acknowledged_at: Time.current }
+    attrs[:assigned_to] = user if user.present?
+    update!(attrs) unless acknowledged?
   end
 
   def resolve!(user = nil)
-    update!(status: :resolved, resolved_at: Time.current, assigned_to: user || assigned_to)
+    attrs = { status: :resolved, resolved_at: Time.current }
+    attrs[:assigned_to] = user if user.present?
+    update!(attrs)
   end
 
   def duration

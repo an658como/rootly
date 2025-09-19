@@ -46,13 +46,13 @@ class IncidentsController < ApplicationController
   # Quick actions for status updates
   def acknowledge
     @incident = Incident.find(params[:id])
-    @incident.acknowledge!(params[:user])
+    @incident.acknowledge!
     redirect_to @incident, notice: "Incident acknowledged."
   end
 
   def resolve
     @incident = Incident.find(params[:id])
-    @incident.resolve!(params[:user])
+    @incident.resolve!
     redirect_to @incident, notice: "Incident resolved."
   end
 

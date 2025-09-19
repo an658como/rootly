@@ -48,8 +48,26 @@
       </div>
 
       <!-- Actions -->
-      <%= turbo_frame_tag "incident_actions_#{incident.id}" do %>
-        <%= render 'incident_actions', incident: incident %>
-      <% end %>
+      <div class="mt-4 flex space-x-2">
+        <% unless incident.resolved? %>
+          <% unless incident.acknowledged? %>
+            <%= link_to acknowledge_incident_path(incident), method: :patch, 
+                class: "inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50",
+                data: { turbo_method: :patch } do %>
+              Acknowledge
+            <% end %>
+          <% end %>
+          <%= link_to resolve_incident_path(incident), method: :patch,
+              class: "inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700",
+              data: { turbo_method: :patch, confirm: "Mark this incident as resolved?" } do %>
+            Resolve
+          <% end %>
+        <% end %>
+        <%= link_to edit_incident_path(incident),
+            class: "inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50",
+            data: { turbo_frame: "_top" } do %>
+          Edit
+        <% end %>
+      </div>
     </div>
 </div>
