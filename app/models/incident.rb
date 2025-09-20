@@ -95,6 +95,9 @@ class Incident < ApplicationRecord
       total_count: total_count,
       unresolved_count: unresolved_count
     })
+
+    # Also log for debugging
+    Rails.logger.info "📊 Broadcasting stats update: Total=#{total_count}, Unresolved=#{unresolved_count}"
   end
 
   def generate_incident_number

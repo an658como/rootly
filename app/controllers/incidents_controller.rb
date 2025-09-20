@@ -21,7 +21,7 @@ class IncidentsController < ApplicationController
 
     if @incident.save
       respond_to do |format|
-        format.html { redirect_to @incident, notice: "Incident #{@incident.incident_number} was successfully created." }
+        format.html { redirect_to incidents_path, notice: "Incident #{@incident.incident_number} was successfully created." }
         format.turbo_stream { redirect_to incidents_path, notice: "Incident #{@incident.incident_number} was successfully created." }
       end
     else
@@ -50,13 +50,13 @@ class IncidentsController < ApplicationController
   def acknowledge
     @incident = Incident.find(params[:id])
     @incident.acknowledge!
-    redirect_to @incident, notice: "Incident acknowledged."
+    redirect_to incidents_path, notice: "Incident #{@incident.incident_number} acknowledged."
   end
 
   def resolve
     @incident = Incident.find(params[:id])
     @incident.resolve!
-    redirect_to @incident, notice: "Incident resolved."
+    redirect_to incidents_path, notice: "Incident #{@incident.incident_number} resolved."
   end
 
   private
