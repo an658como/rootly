@@ -88,19 +88,19 @@ Building a simple incident tracking system with Ruby on Rails + Hotwire Turbo an
 
 ### **Phase 3: Slack Integration**
 
-9. ⏳ **Database Schema Updates** - Add Slack-specific fields
+9. ✅ **Database Schema Updates** - Add Slack-specific fields
 
-   - Add `slack_channel_id` to incidents table (for dedicated channels)
-   - Add `slack_channel_name` for human-readable channel names
-   - Add `declared_by` field for Slack user who declared the incident
-   - Add `slack_thread_ts` for message threading
+   - ✅ Add `slack_channel_id` to incidents table (for dedicated channels)
+   - ✅ Add `slack_channel_name` for human-readable channel names
+   - ✅ Add `declared_by` field for Slack user who declared the incident
+   - ✅ Using existing `slack_message_ts` for message threading
 
-10. ⏳ **API Endpoints** - For Slack bot to communicate
+10. ✅ **API Endpoints** - For Slack bot to communicate
 
-    - `Api::IncidentsController` with JSON responses
-    - Slack webhook endpoints for slash commands
-    - Slack interactive component endpoints (modals, buttons)
-    - Authentication for Slack requests (verify signatures)
+    - ✅ `Api::IncidentsController` with JSON responses (full CRUD + resolve/acknowledge)
+    - ✅ Slack webhook endpoints for slash commands (`/api/slack/commands`)
+    - ✅ Slack interactive component endpoints (`/api/slack/interactive`)
+    - ⏳ Authentication for Slack requests (verify signatures)
 
 11. ⏳ **Slack App Setup** - Configure Slack application
 
@@ -225,10 +225,11 @@ end
 
 ## Current Status
 
-- **Current Phase**: Phase 3 - Slack Integration
+- **Current Phase**: Phase 3 - Slack Integration (60% complete)
 - **Completed**: ✅ Phase 1 (Core Rails App) & ✅ Phase 2 (Enhanced Web Experience)
-- **Next Action**: Add Slack-specific database fields and create API endpoints
-- **Ready to proceed**: Full web dashboard with real-time multi-tab updates working perfectly!
+- **Recently Completed**: ✅ Database schema updates & ✅ API endpoints infrastructure
+- **Next Action**: Set up Slack app configuration and implement `/rootly declare` modal
+- **Ready to proceed**: API endpoints tested and working, ready for actual Slack integration!
 
 ## Notes
 

@@ -7,7 +7,9 @@ class Api::IncidentsController < Api::BaseController
     render_json_success(
       {
         incidents: incidents.as_json(
-          include: [ :slack_channel_id, :slack_channel_name, :declared_by ]
+          only: [ :id, :title, :description, :status, :severity, :created_by, :assigned_to,
+                 :resolved_at, :acknowledged_at, :incident_number, :created_at, :updated_at,
+                 :slack_channel_id, :slack_channel_name, :declared_by, :slack_message_ts ]
         )
       }
     )
@@ -18,7 +20,9 @@ class Api::IncidentsController < Api::BaseController
     render_json_success(
       {
         incident: @incident.as_json(
-          include: [ :slack_channel_id, :slack_channel_name, :declared_by ]
+          only: [ :id, :title, :description, :status, :severity, :created_by, :assigned_to,
+                 :resolved_at, :acknowledged_at, :incident_number, :created_at, :updated_at,
+                 :slack_channel_id, :slack_channel_name, :declared_by, :slack_message_ts ]
         )
       }
     )
@@ -32,7 +36,9 @@ class Api::IncidentsController < Api::BaseController
       render_json_success(
         {
           incident: incident.as_json(
-            include: [ :slack_channel_id, :slack_channel_name, :declared_by ]
+            only: [ :id, :title, :description, :status, :severity, :created_by, :assigned_to,
+                 :resolved_at, :acknowledged_at, :incident_number, :created_at, :updated_at,
+                 :slack_channel_id, :slack_channel_name, :declared_by, :slack_message_ts ]
           )
         },
         "Incident #{incident.incident_number} created successfully"
@@ -48,7 +54,9 @@ class Api::IncidentsController < Api::BaseController
       render_json_success(
         {
           incident: @incident.as_json(
-            include: [ :slack_channel_id, :slack_channel_name, :declared_by ]
+            only: [ :id, :title, :description, :status, :severity, :created_by, :assigned_to,
+                 :resolved_at, :acknowledged_at, :incident_number, :created_at, :updated_at,
+                 :slack_channel_id, :slack_channel_name, :declared_by, :slack_message_ts ]
           )
         },
         "Incident #{@incident.incident_number} updated successfully"
@@ -69,7 +77,9 @@ class Api::IncidentsController < Api::BaseController
     render_json_success(
       {
         incident: @incident.as_json(
-          include: [ :slack_channel_id, :slack_channel_name, :declared_by ]
+          only: [ :id, :title, :description, :status, :severity, :created_by, :assigned_to,
+                 :resolved_at, :acknowledged_at, :incident_number, :created_at, :updated_at,
+                 :slack_channel_id, :slack_channel_name, :declared_by, :slack_message_ts ]
         )
       },
       "Incident #{@incident.incident_number} resolved successfully"
@@ -87,7 +97,9 @@ class Api::IncidentsController < Api::BaseController
     render_json_success(
       {
         incident: @incident.as_json(
-          include: [ :slack_channel_id, :slack_channel_name, :declared_by ]
+          only: [ :id, :title, :description, :status, :severity, :created_by, :assigned_to,
+                 :resolved_at, :acknowledged_at, :incident_number, :created_at, :updated_at,
+                 :slack_channel_id, :slack_channel_name, :declared_by, :slack_message_ts ]
         )
       },
       "Incident #{@incident.incident_number} acknowledged successfully"
