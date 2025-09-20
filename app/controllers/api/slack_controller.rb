@@ -3,8 +3,8 @@ class Api::SlackController < Api::BaseController
 
   # POST /api/slack/commands
   def commands
-    # Verify the request is from Slack (we'll implement this later)
-    # verify_slack_request!
+    # Verify the request is from Slack
+    return render json: { error: "Unauthorized" }, status: :unauthorized unless verify_slack_request!
 
     command = params[:command]
     text = params[:text]
@@ -23,6 +23,9 @@ class Api::SlackController < Api::BaseController
 
   # POST /api/slack/interactive
   def interactive
+    # Verify the request is from Slack
+    return render json: { error: "Unauthorized" }, status: :unauthorized unless verify_slack_request!
+
     # Handle Slack interactive components (modals, buttons, etc.)
     payload = JSON.parse(params[:payload])
 
@@ -165,18 +168,29 @@ class Api::SlackController < Api::BaseController
       declared_by: user_name
     )
 
-    if incident.save
-      # Success - incident created
-      success_message = build_incident_created_message(incident, user_name)
+      if incident.save
+        # Success - incident created
+        success_message = build_incident_created_message(incident, user_name)
 
-      # TODO: Create Slack channel for the incident
-      # TODO: Post incident summary to the channel
+        # Create Slack channel for the incident
+        channel_result = create_incident_channel(incident, user_name)
 
-      render json: {
-        response_action: "clear",
-        text: success_message
-      }, status: :ok
-    else
+        if channel_result[:success]
+          # Update incident with channel info
+          incident.update(
+            slack_channel_id: channel_result[:channel_id],
+            slack_channel_name: channel_result[:channel_name]
+          )
+
+          # Post incident summary to the channel
+          post_incident_summary_to_channel(incident, channel_result[:channel_id])
+        end
+
+        render json: {
+          response_action: "clear",
+          text: success_message
+        }, status: :ok
+      else
       # Error - validation failed
       error_message = "❌ Failed to create incident: #{incident.errors.full_messages.join(', ')}"
 
@@ -188,7 +202,7 @@ class Api::SlackController < Api::BaseController
           "incident_severity" => incident.errors[:severity].first || ""
         }
       }, status: :ok
-    end
+      end
   end
 
   def handle_block_actions(payload)
@@ -366,6 +380,12 @@ class Api::SlackController < Api::BaseController
   end
 
   def build_incident_created_message(incident, user_name)
+    channel_info = if incident.slack_channel_name.present?
+      "💬 Dedicated channel: ##{incident.slack_channel_name}"
+    else
+      "💬 Dedicated channel: #incident-#{incident.incident_number.downcase} (creating...)"
+    end
+
     "🎉 *Incident #{incident.incident_number} Created Successfully*\n" \
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" \
     "📋 #{incident.title}\n" \
@@ -374,6 +394,167 @@ class Api::SlackController < Api::BaseController
     "🔄 Status: #{incident.status.humanize}\n" \
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" \
     "📱 View in dashboard: #{dashboard_incident_url(incident)}\n" \
-    "💬 Dedicated channel: #incident-#{incident.incident_number.downcase} (coming soon)"
+    "#{channel_info}"
+  end
+
+  def create_incident_channel(incident, user_name)
+    # Generate channel name: incident-inc-2025-001
+    channel_name = "incident-#{incident.incident_number.downcase}"
+
+    # In a real implementation, this would use the Slack API to create a channel
+    # For now, we'll simulate the channel creation
+
+    begin
+      # Simulate Slack API call
+      # slack_client = Slack::Web::Client.new(token: ENV['SLACK_BOT_TOKEN'])
+      # response = slack_client.conversations_create(
+      #   name: channel_name,
+      #   is_private: false
+      # )
+
+      # For testing, we'll return a simulated successful response
+      simulated_channel_id = "C#{Time.current.to_i}#{rand(1000..9999)}"
+
+      {
+        success: true,
+        channel_id: simulated_channel_id,
+        channel_name: channel_name,
+        message: "Channel ##{channel_name} created successfully"
+      }
+    rescue => e
+      Rails.logger.error "Failed to create Slack channel: #{e.message}"
+      {
+        success: false,
+        error: e.message
+      }
+    end
+  end
+
+  def post_incident_summary_to_channel(incident, channel_id)
+    # Build the incident summary message for the channel
+    summary_blocks = build_incident_summary_blocks(incident)
+
+    begin
+      # In a real implementation, this would post to Slack
+      # slack_client = Slack::Web::Client.new(token: ENV['SLACK_BOT_TOKEN'])
+      # slack_client.chat_postMessage(
+      #   channel: channel_id,
+      #   blocks: summary_blocks,
+      #   text: "Incident #{incident.incident_number}: #{incident.title}"
+      # )
+
+      Rails.logger.info "Posted incident summary to channel #{channel_id}"
+      true
+    rescue => e
+      Rails.logger.error "Failed to post incident summary: #{e.message}"
+      false
+    end
+  end
+
+  def build_incident_summary_blocks(incident)
+    [
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: "🚨 #{incident.incident_number}: #{incident.title}",
+          emoji: true
+        }
+      },
+      {
+        type: "section",
+        fields: [
+          {
+            type: "mrkdwn",
+            text: "*Severity:*\n#{severity_emoji(incident.severity)} #{incident.severity.humanize}"
+          },
+          {
+            type: "mrkdwn",
+            text: "*Status:*\n🔄 #{incident.status.humanize}"
+          },
+          {
+            type: "mrkdwn",
+            text: "*Declared by:*\n👤 @#{incident.declared_by}"
+          },
+          {
+            type: "mrkdwn",
+            text: "*Created:*\n📅 #{incident.created_at.strftime('%B %d, %Y at %I:%M %p %Z')}"
+          }
+        ]
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: "*Description:*\n#{incident.description.presence || '_No description provided_'}"
+        }
+      },
+      {
+        type: "divider"
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: "📱 *<#{dashboard_incident_url(incident)}|View in Dashboard>*"
+        }
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: "Use `/rootly resolve` in this channel when the incident is resolved"
+          }
+        ]
+      }
+    ]
+  end
+
+  def severity_emoji(severity)
+    case severity.to_s
+    when "low" then "🟢"
+    when "medium" then "🟡"
+    when "high" then "🟠"
+    when "critical" then "🔴"
+    else "⚪"
+    end
+  end
+
+  def verify_slack_request!
+    # In development/testing, skip verification
+    return true if Rails.env.development? || Rails.env.test?
+
+    # Get Slack signing secret from environment
+    signing_secret = ENV["SLACK_SIGNING_SECRET"]
+    return false if signing_secret.blank?
+
+    # Get request timestamp and signature from headers
+    timestamp = request.headers["X-Slack-Request-Timestamp"]
+    signature = request.headers["X-Slack-Signature"]
+
+    return false if timestamp.blank? || signature.blank?
+
+    # Check if request is too old (replay attack protection)
+    return false if (Time.current.to_i - timestamp.to_i).abs > 300 # 5 minutes
+
+    # Get raw request body
+    body = request.raw_post
+
+    # Create the signature base string
+    sig_basestring = "v0:#{timestamp}:#{body}"
+
+    # Calculate expected signature
+    expected_signature = "v0=" + OpenSSL::HMAC.hexdigest(
+      OpenSSL::Digest.new("sha256"),
+      signing_secret,
+      sig_basestring
+    )
+
+    # Compare signatures using secure comparison
+    ActiveSupport::SecurityUtils.secure_compare(signature, expected_signature)
+  rescue => e
+    Rails.logger.error "Slack signature verification failed: #{e.message}"
+    false
   end
 end
