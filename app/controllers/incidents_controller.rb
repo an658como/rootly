@@ -34,7 +34,10 @@ class IncidentsController < ApplicationController
 
   def update
     if @incident.update(incident_params)
-      redirect_to @incident, notice: "Incident #{@incident.incident_number} was successfully updated."
+      respond_to do |format|
+        format.html { redirect_to incidents_path, notice: "Incident #{@incident.incident_number} was successfully updated." }
+        format.turbo_stream { redirect_to incidents_path, notice: "Incident #{@incident.incident_number} was successfully updated." }
+      end
     else
       render :edit, status: :unprocessable_entity
     end

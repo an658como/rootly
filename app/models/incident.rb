@@ -88,7 +88,7 @@ class Incident < ApplicationRecord
 
   def broadcast_incident_updated
     # Broadcast updated incident card
-    broadcast_replace_to "incidents", partial: "incidents/incident_card", locals: { incident: self }
+    broadcast_replace_to "incidents", target: "incident_#{id}", partial: "incidents/incident_card", locals: { incident: self }
     # Broadcast updated stats
     broadcast_stats_update
   end
