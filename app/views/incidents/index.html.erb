@@ -5,14 +5,7 @@
       <div class="flex justify-between items-center py-6">
         <div class="flex items-center">
           <h1 class="text-3xl font-bold text-gray-900">Incident Dashboard</h1>
-          <div class="ml-6 flex space-x-4" id="dashboard-stats">
-            <div class="bg-blue-100 px-3 py-1 rounded-full">
-              <span class="text-sm font-medium text-blue-800">Total: <span id="total-count"><%= @total_count %></span></span>
-            </div>
-            <div class="bg-red-100 px-3 py-1 rounded-full">
-              <span class="text-sm font-medium text-red-800">Unresolved: <span id="unresolved-count"><%= @unresolved_count %></span></span>
-            </div>
-          </div>
+          <%= render 'dashboard_stats', total_count: @total_count, unresolved_count: @unresolved_count %>
         </div>
         <div>
           <%= link_to new_incident_path, class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" do %>

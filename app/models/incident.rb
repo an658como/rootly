@@ -1,13 +1,8 @@
 class Incident < ApplicationRecord
-  # Broadcasting for real-time updates
-  after_create_commit -> { broadcast_prepend_to "incidents", partial: "incidents/incident_card", locals: { incident: self } }
-  after_update_commit -> { broadcast_replace_to "incidents", partial: "incidents/incident_card", locals: { incident: self } }
-  after_destroy_commit -> { broadcast_remove_to "incidents" }
-
-  # Broadcast dashboard stats updates
-  after_create_commit :broadcast_stats_update
-  after_update_commit :broadcast_stats_update
-  after_destroy_commit :broadcast_stats_update
+  # Broadcasting for real-time updates using Turbo Streams
+  after_create_commit :broadcast_incident_created
+  after_update_commit :broadcast_incident_updated
+  after_destroy_commit :broadcast_incident_destroyed
 
   # Enums for status and severity
   enum :status, {
@@ -84,17 +79,37 @@ class Incident < ApplicationRecord
 
   private
 
+  def broadcast_incident_created
+    # Broadcast new incident card
+    broadcast_prepend_to "incidents", partial: "incidents/incident_card", locals: { incident: self }
+    # Broadcast updated stats
+    broadcast_stats_update
+  end
+
+  def broadcast_incident_updated
+    # Broadcast updated incident card
+    broadcast_replace_to "incidents", partial: "incidents/incident_card", locals: { incident: self }
+    # Broadcast updated stats
+    broadcast_stats_update
+  end
+
+  def broadcast_incident_destroyed
+    # Remove incident card
+    broadcast_remove_to "incidents"
+    # Broadcast updated stats
+    broadcast_stats_update
+  end
+
   def broadcast_stats_update
     # Calculate current stats
     total_count = Incident.count
     unresolved_count = Incident.unresolved.count
 
-    # Broadcast updated stats to all connected clients
-    ActionCable.server.broadcast("incidents", {
-      type: "stats_update",
-      total_count: total_count,
-      unresolved_count: unresolved_count
-    })
+    # Broadcast updated stats using Turbo Streams
+    broadcast_replace_to "incidents",
+      target: "dashboard-stats",
+      partial: "incidents/dashboard_stats",
+      locals: { total_count: total_count, unresolved_count: unresolved_count }
 
     # Also log for debugging
     Rails.logger.info "📊 Broadcasting stats update: Total=#{total_count}, Unresolved=#{unresolved_count}"
