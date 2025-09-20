@@ -43,6 +43,11 @@ services:
       - DATABASE_URL=postgres://postgres:password@db:5432/incident_ticketing_development
       - REDIS_URL=redis://redis:6379/0
       - RAILS_ENV=development
+      # Slack Integration Environment Variables (loaded from .env file)
+      - SLACK_BOT_TOKEN
+      - SLACK_SIGNING_SECRET
+      - SLACK_CLIENT_ID
+      - SLACK_CLIENT_SECRET
     depends_on:
       db:
         condition: service_healthy

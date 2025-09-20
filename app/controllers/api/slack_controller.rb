@@ -98,26 +98,57 @@ class Api::SlackController < Api::BaseController
       return
     end
 
-    # Build and return the modal view
-    modal_view = build_incident_modal(title, user_id, user_name)
+    # Get the trigger_id from the slash command (needed to open modals)
+    trigger_id = params[:trigger_id]
 
-    # For testing purposes, we'll return the modal JSON
-    # In a real Slack app, you'd use the Slack API to open the modal with the trigger_id
-    render json: {
-      text: "🚨 Incident declaration for: *#{title}*",
-      response_type: "ephemeral",
-      attachments: [
-        {
-          color: "warning",
-          text: "Modal would open here with the following form:",
-          fields: [
-            { title: "Title", value: title, short: true },
-            { title: "Severity", value: "Medium (default)", short: true },
-            { title: "Description", value: "Optional field", short: false }
-          ]
-        }
-      ]
-    }, status: :ok
+    if trigger_id.blank?
+      render json: {
+        text: "❌ Missing trigger_id - cannot open modal. This might be a testing limitation."
+      }, status: :ok
+      return
+    end
+
+    # Build the modal view
+    modal_view = build_incident_modal(title, user_id, user_name, channel_id)
+
+    # Open the modal using Slack API
+    begin
+      slack_client = Slack::Web::Client.new(token: ENV["SLACK_BOT_TOKEN"])
+
+      response = slack_client.views_open(
+        trigger_id: trigger_id,
+        view: modal_view
+      )
+
+      # Return empty response (modal opened successfully)
+      render json: {}, status: :ok
+
+    rescue Slack::Web::Api::Errors::SlackError => e
+      Rails.logger.error "Failed to open Slack modal: #{e.message}"
+
+      # Fallback: show the modal preview
+      render json: {
+        text: "🚨 Incident declaration for: *#{title}*",
+        response_type: "ephemeral",
+        attachments: [
+          {
+            color: "warning",
+            text: "Modal would open here (Slack API error: #{e.message}):",
+            fields: [
+              { title: "Title", value: title, short: true },
+              { title: "Severity", value: "Medium (default)", short: true },
+              { title: "Description", value: "Optional field", short: false }
+            ]
+          }
+        ]
+      }, status: :ok
+    rescue => e
+      Rails.logger.error "Unexpected error opening modal: #{e.message}"
+
+      render json: {
+        text: "❌ Error opening modal: #{e.message}"
+      }, status: :ok
+    end
   end
 
   def handle_resolve_command(user_id, user_name, channel_id, channel_name)
@@ -218,9 +249,30 @@ class Api::SlackController < Api::BaseController
           post_incident_summary_to_channel(incident, channel_result[:channel_id])
         end
 
+        # Send a success message to the user via chat.postEphemeral
+        begin
+          slack_client = Slack::Web::Client.new(token: ENV["SLACK_BOT_TOKEN"])
+
+          success_message = "🎉 *Incident #{incident.incident_number} created successfully!*\n" \
+                           "📋 #{incident.title}\n" \
+                           "📊 Severity: #{incident.severity.humanize}\n" \
+                           "🔗 View in dashboard: #{dashboard_incident_url(incident)}"
+
+          # Get the original channel from private metadata
+          original_channel = private_metadata["original_channel"]
+
+          slack_client.chat_postEphemeral(
+            channel: original_channel,
+            user: user_id,
+            text: success_message
+          )
+        rescue => e
+          Rails.logger.error "Failed to send success message: #{e.message}"
+        end
+
+        # For modal submissions, just clear the modal
         render json: {
-          response_action: "clear",
-          text: success_message
+          response_action: "clear"
         }, status: :ok
       else
       # Error - validation failed
@@ -252,7 +304,7 @@ class Api::SlackController < Api::BaseController
     Rails.logger.info "📨 Channel created: #{event_data[:channel][:name]}"
   end
 
-  def build_incident_modal(title, user_id, user_name)
+  def build_incident_modal(title, user_id, user_name, channel_id)
     {
       type: "modal",
       callback_id: "incident_declaration",
@@ -389,7 +441,7 @@ class Api::SlackController < Api::BaseController
       private_metadata: JSON.generate({
         user_id: user_id,
         user_name: user_name,
-        original_channel: params[:channel_id]
+        original_channel: channel_id
       })
     }
   end
