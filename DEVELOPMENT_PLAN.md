@@ -43,20 +43,21 @@ Building a simple incident tracking system with Ruby on Rails + Hotwire Turbo an
    - `created_at` (datetime)
    - `description` (text, optional)
 
-3. ⏳ **Dashboard Controller & Views** - Basic CRUD with Turbo Frames
+3. ✅ **Dashboard Controller & Views** - Basic CRUD with Turbo Frames
 
-   - `IncidentsController` with index, show, new, create, update actions
+   - `IncidentsController` with index, show, new, create, edit, update, destroy actions
    - Dashboard view showing incident list
-   - Form to create new incidents
+   - Forms for creating and editing incidents
+   - Quick actions for acknowledge/resolve
    - Turbo Frame for incident cards
 
-4. ⏳ **Simple Styling** - Make it look decent
+4. ✅ **Simple Styling** - Make it look decent
 
    - Tailwind CSS for basic styling
    - Responsive incident cards
    - Clean dashboard layout
 
-5. ⏳ **Test with Manual Data** - Verify everything works
+5. ✅ **Test with Manual Data** - Verify everything works
    - Seed some sample incidents
    - Test CRUD operations
    - Verify Turbo Frames work
