@@ -1,4 +1,14 @@
 class Incident < ApplicationRecord
+  # Broadcasting for real-time updates
+  after_create_commit -> { broadcast_prepend_to "incidents", partial: "incidents/incident_card", locals: { incident: self } }
+  after_update_commit -> { broadcast_replace_to "incidents", partial: "incidents/incident_card", locals: { incident: self } }
+  after_destroy_commit -> { broadcast_remove_to "incidents" }
+
+  # Broadcast dashboard stats updates
+  after_create_commit :broadcast_stats_update
+  after_update_commit :broadcast_stats_update
+  after_destroy_commit :broadcast_stats_update
+
   # Enums for status and severity
   enum :status, {
     open: 0,
@@ -73,6 +83,19 @@ class Incident < ApplicationRecord
   end
 
   private
+
+  def broadcast_stats_update
+    # Calculate current stats
+    total_count = Incident.count
+    unresolved_count = Incident.unresolved.count
+
+    # Broadcast updated stats to all connected clients
+    ActionCable.server.broadcast("incidents", {
+      type: "stats_update",
+      total_count: total_count,
+      unresolved_count: unresolved_count
+    })
+  end
 
   def generate_incident_number
     return if incident_number.present?

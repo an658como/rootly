@@ -20,7 +20,10 @@ class IncidentsController < ApplicationController
     @incident = Incident.new(incident_params)
 
     if @incident.save
-      redirect_to @incident, notice: "Incident #{@incident.incident_number} was successfully created."
+      respond_to do |format|
+        format.html { redirect_to @incident, notice: "Incident #{@incident.incident_number} was successfully created." }
+        format.turbo_stream { redirect_to incidents_path, notice: "Incident #{@incident.incident_number} was successfully created." }
+      end
     else
       render :new, status: :unprocessable_entity
     end
