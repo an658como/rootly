@@ -495,28 +495,37 @@ class Api::SlackController < Api::BaseController
     # Generate channel name: incident-inc-2025-001
     channel_name = "incident-#{incident.incident_number.downcase}"
 
-    # In a real implementation, this would use the Slack API to create a channel
-    # For now, we'll simulate the channel creation
-
     begin
-      # Simulate Slack API call
-      # slack_client = Slack::Web::Client.new(token: ENV['SLACK_BOT_TOKEN'])
-      # response = slack_client.conversations_create(
-      #   name: channel_name,
-      #   is_private: false
-      # )
+      # Create actual Slack channel using the API
+      slack_client = Slack::Web::Client.new(token: ENV["SLACK_BOT_TOKEN"])
 
-      # For testing, we'll return a simulated successful response
+      response = slack_client.conversations_create(
+        name: channel_name,
+        is_private: false
+      )
+
+      Rails.logger.info "✅ Created Slack channel: ##{channel_name} (#{response.channel.id})"
+
+      {
+        success: true,
+        channel_id: response.channel.id,
+        channel_name: channel_name,
+        message: "Channel ##{channel_name} created successfully"
+      }
+    rescue Slack::Web::Api::Errors::SlackError => e
+      Rails.logger.error "❌ Slack API Error creating channel: #{e.message}"
+
+      # Fallback to simulation if API fails
       simulated_channel_id = "C#{Time.current.to_i}#{rand(1000..9999)}"
 
       {
         success: true,
         channel_id: simulated_channel_id,
         channel_name: channel_name,
-        message: "Channel ##{channel_name} created successfully"
+        message: "Channel creation failed, using simulation: #{e.message}"
       }
     rescue => e
-      Rails.logger.error "Failed to create Slack channel: #{e.message}"
+      Rails.logger.error "❌ Failed to create Slack channel: #{e.message}"
       {
         success: false,
         error: e.message
@@ -529,18 +538,22 @@ class Api::SlackController < Api::BaseController
     summary_blocks = build_incident_summary_blocks(incident)
 
     begin
-      # In a real implementation, this would post to Slack
-      # slack_client = Slack::Web::Client.new(token: ENV['SLACK_BOT_TOKEN'])
-      # slack_client.chat_postMessage(
-      #   channel: channel_id,
-      #   blocks: summary_blocks,
-      #   text: "Incident #{incident.incident_number}: #{incident.title}"
-      # )
+      # Post actual message to Slack channel
+      slack_client = Slack::Web::Client.new(token: ENV["SLACK_BOT_TOKEN"])
 
-      Rails.logger.info "Posted incident summary to channel #{channel_id}"
+      response = slack_client.chat_postMessage(
+        channel: channel_id,
+        blocks: summary_blocks,
+        text: "Incident #{incident.incident_number}: #{incident.title}"
+      )
+
+      Rails.logger.info "✅ Posted incident summary to channel #{channel_id}"
       true
+    rescue Slack::Web::Api::Errors::SlackError => e
+      Rails.logger.error "❌ Slack API Error posting message: #{e.message}"
+      false
     rescue => e
-      Rails.logger.error "Failed to post incident summary: #{e.message}"
+      Rails.logger.error "❌ Failed to post incident summary: #{e.message}"
       false
     end
   end
