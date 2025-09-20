@@ -36,12 +36,15 @@ Building a simple incident tracking system with Ruby on Rails + Hotwire Turbo an
    cd incident_ticketing
    ```
 
-2. ⏳ **Basic Incident Model** - Simple fields
+2. ✅ **Basic Incident Model** - Simple fields
 
    - `title` (string)
-   - `status` (enum: open, resolved)
-   - `created_at` (datetime)
+   - `status` (enum: open, investigating, resolved)
+   - `severity` (enum: low, medium, high, critical)
+   - `created_by`, `assigned_to` (email fields)
    - `description` (text, optional)
+   - `incident_number` (auto-generated, e.g., INC-2025-001)
+   - Timestamps for acknowledgment and resolution
 
 3. ✅ **Dashboard Controller & Views** - Basic CRUD with Turbo Frames
 
@@ -64,22 +67,24 @@ Building a simple incident tracking system with Ruby on Rails + Hotwire Turbo an
 
 ### **Phase 2: Enhanced Web Experience**
 
-6. ⏳ **Real-time Updates** - Turbo Streams for live updates
+6. ✅ **Real-time Updates** - Turbo Streams for live updates
 
-   - Action Cable setup
-   - Broadcast incident changes
-   - Live dashboard updates
+   - Action Cable setup with Redis
+   - Broadcast incident changes via `after_commit` callbacks
+   - Live dashboard updates across multiple tabs
+   - JavaScript Stimulus controller for ActionCable connection
 
-7. ⏳ **Status Management** - Buttons to change incident status
+7. ✅ **Status Management** - Buttons to change incident status
 
-   - "Resolve" button on incident cards
-   - Status change animations
-   - Timestamp tracking
+   - "Acknowledge" and "Resolve" buttons on incident cards
+   - Multi-tab real-time updates with `broadcast_replace_to`
+   - Automatic timestamp tracking for acknowledgment and resolution
+   - Consistent broadcasting across create/update/resolve actions
 
-8. ⏳ **Basic Validations** - Ensure data integrity
-   - Title presence validation
-   - Status enum validation
-   - Error handling in forms
+8. ✅ **Basic Validations** - Ensure data integrity
+   - Title, status, severity, created_by presence validations
+   - Unique incident number generation
+   - Error handling in forms with proper partials
 
 ### **Phase 3: Slack Integration**
 
@@ -155,9 +160,10 @@ end
 
 ## Current Status
 
-- **Current Phase**: Phase 1, Step 1
-- **Next Action**: Create Rails app foundation
-- **Ready to proceed**: Awaiting confirmation to start Rails setup
+- **Current Phase**: Phase 3 - Slack Integration
+- **Completed**: ✅ Phase 1 (Core Rails App) & ✅ Phase 2 (Enhanced Web Experience)
+- **Next Action**: Create API endpoints for Slack bot communication
+- **Ready to proceed**: Full web dashboard with real-time multi-tab updates working perfectly!
 
 ## Notes
 
