@@ -33,6 +33,10 @@ gem "solid_cable"
 # Use Redis for Action Cable
 gem "redis", ">= 4.0.1"
 
+# Slack integration
+gem "slack-ruby-client"
+gem "sinatra", require: false  # For Slack webhook endpoints
+
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 

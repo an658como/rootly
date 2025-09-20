@@ -9,7 +9,7 @@ Building a simple incident tracking system with Ruby on Rails + Hotwire Turbo an
 - **Backend**: Ruby on Rails 7.1+ with Hotwire (Turbo + Stimulus)
 - **Frontend**: Hotwire Turbo Frames/Streams + Tailwind CSS
 - **Database**: SQLite (demo) → PostgreSQL (production)
-- **Slack Bot**: Ruby with slack-ruby-bot gem
+- **Slack Bot**: Ruby with slack-ruby-client gem + Sinatra for webhooks
 - **Real-time**: Action Cable + Turbo Streams
 
 ## Architecture
@@ -88,28 +88,52 @@ Building a simple incident tracking system with Ruby on Rails + Hotwire Turbo an
 
 ### **Phase 3: Slack Integration**
 
-9. ⏳ **API Endpoints** - For Slack bot to communicate
+9. ⏳ **Database Schema Updates** - Add Slack-specific fields
 
-   - `Api::IncidentsController`
-   - JSON API for creating/updating incidents
-   - Authentication for Slack requests
+   - Add `slack_channel_id` to incidents table (for dedicated channels)
+   - Add `slack_channel_name` for human-readable channel names
+   - Add `declared_by` field for Slack user who declared the incident
+   - Add `slack_thread_ts` for message threading
 
-10. ⏳ **Slack Bot Setup** - Basic `/rootly incident` command
+10. ⏳ **API Endpoints** - For Slack bot to communicate
 
-    - slack-ruby-bot gem setup
-    - Slack app configuration
-    - Webhook endpoint setup
+    - `Api::IncidentsController` with JSON responses
+    - Slack webhook endpoints for slash commands
+    - Slack interactive component endpoints (modals, buttons)
+    - Authentication for Slack requests (verify signatures)
 
-11. ⏳ **Command Parsing** - Handle the title parameter
+11. ⏳ **Slack App Setup** - Configure Slack application
 
-    - Parse `/rootly incident <title>` command
-    - Create incident via API
-    - Send confirmation to Slack
+    - Create Slack app with proper scopes
+    - Set up slash command endpoints
+    - Configure interactive components for modals
+    - Set up bot permissions for channel creation
 
-12. ⏳ **Resolve Command** - `/rootly resolve` functionality
-    - Parse `/rootly resolve <incident_id>` command
-    - Update incident status
-    - Send confirmation to Slack
+12. ⏳ **`/rootly declare` Command** - Modal-based incident creation
+
+    - Parse `/rootly declare <title>` command (works in any channel)
+    - Open Slack modal with incident form (title required, description/severity optional)
+    - Create new incident in database
+    - Create dedicated Slack channel for the incident
+    - Invite relevant responders to the channel
+    - Post initial incident summary to the channel
+
+13. ⏳ **`/rootly resolve` Command** - Channel-specific resolution
+
+    - Only works in dedicated incident channels
+    - Mark incident as resolved in database
+    - Calculate resolution time and metrics
+    - Post resolution summary with Block Kit design
+    - Archive the incident channel (optional)
+    - Broadcast update to web dashboard
+
+14. ⏳ **Slack Block Kit Design** - Rich UI components
+
+    - Design incident creation modal with Block Kit
+    - Create incident summary cards for channels
+    - Design resolution summary with metrics
+    - Add interactive buttons for common actions
+    - Implement consistent branding and UX
 
 ### **Phase 4: Integration & Polish**
 
@@ -132,19 +156,60 @@ Building a simple incident tracking system with Ruby on Rails + Hotwire Turbo an
 
 ## Slack Commands Specification
 
-### `/rootly incident <title>`
+### `/rootly declare <title>`
 
-- Creates new incident with "open" status
-- Assigns unique ID
-- Posts confirmation back to Slack
-- Broadcasts update to dashboard via Turbo Streams
+**Usage**: Works in any Slack channel
+**Flow**:
 
-### `/rootly resolve <incident_id>`
+1. User types `/rootly declare Database outage affecting users`
+2. Slack opens a modal with:
+   - Title (pre-filled, required)
+   - Description (optional textarea)
+   - Severity (dropdown: Low/Medium/High/Critical)
+   - Assign to (user picker, optional)
+3. On submission:
+   - Creates incident in database with "open" status
+   - Generates unique incident number (e.g., INC-2025-003)
+   - Creates dedicated Slack channel `#incident-inc-2025-003`
+   - Invites responders to the channel
+   - Posts rich incident summary with Block Kit
+   - Broadcasts to web dashboard via Turbo Streams
 
-- Updates incident status to "resolved"
-- Adds resolution timestamp
-- Notifies in Slack
-- Updates dashboard in real-time
+**Channel Creation**:
+
+- Channel name: `#incident-{incident_number}` (lowercase)
+- Channel purpose: "Incident: {title} | Status: {status} | Declared by: {user}"
+- Auto-invite: Incident responders team
+
+### `/rootly resolve`
+
+**Usage**: Only works in dedicated incident channels (`#incident-*`)
+**Flow**:
+
+1. User types `/rootly resolve` in incident channel
+2. System validates it's an incident channel
+3. Marks incident as resolved with timestamp
+4. Calculates and posts resolution metrics:
+   - Total resolution time
+   - Time to acknowledgment (if applicable)
+   - Assigned responders
+   - Status timeline
+5. Broadcasts update to web dashboard
+6. Optionally archives the channel
+
+**Resolution Summary** (Block Kit):
+
+```
+🎉 Incident INC-2025-003 Resolved
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 Database outage affecting users
+⏱️  Total time: 2h 34m
+👤 Resolved by: @john.doe
+📊 Impact: High severity
+🔄 Status: Open → Investigating → Resolved
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+View in dashboard: https://app.com/incidents/123
+```
 
 ## Initial Incident Model Structure
 
@@ -162,7 +227,7 @@ end
 
 - **Current Phase**: Phase 3 - Slack Integration
 - **Completed**: ✅ Phase 1 (Core Rails App) & ✅ Phase 2 (Enhanced Web Experience)
-- **Next Action**: Create API endpoints for Slack bot communication
+- **Next Action**: Add Slack-specific database fields and create API endpoints
 - **Ready to proceed**: Full web dashboard with real-time multi-tab updates working perfectly!
 
 ## Notes
