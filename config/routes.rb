@@ -15,7 +15,7 @@ Rails.application.routes.draw do
 
   # Action Cable endpoint
   mount ActionCable.server => "/cable"
-  
+
   # API routes for Slack integration
   namespace :api do
     resources :incidents do
@@ -24,10 +24,11 @@ Rails.application.routes.draw do
         post :acknowledge
       end
     end
-    
+
     # Slack webhook endpoints
     post "slack/commands", to: "slack#commands"
     post "slack/interactive", to: "slack#interactive"
+    post "slack/events", to: "slack#events"
   end
 
   # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)

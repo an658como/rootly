@@ -114,6 +114,7 @@ You can find these values in your Slack app settings:
    ```
 
 3. **Update the Slack controller** to use real API calls:
+
    ```ruby
    # In app/controllers/api/slack_controller.rb
    def create_incident_channel(incident, user_name)

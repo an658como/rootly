@@ -63,7 +63,16 @@ Rails.application.configure do
 
   # Action Cable configuration for development
   config.action_cable.url = "ws://localhost:3000/cable"
-  config.action_cable.allowed_request_origins = [ "http://localhost:3000" ]
+  config.action_cable.allowed_request_origins = [
+    "http://localhost:3000",
+    "https://74e66eb36be8.ngrok-free.app"
+  ]
+
+  # Allow ngrok hosts for Slack integration
+  config.hosts << "74e66eb36be8.ngrok-free.app"
+  # Allow any ngrok subdomain (for when ngrok URL changes)
+  config.hosts << /.*\.ngrok-free\.app/
+  config.hosts << /.*\.ngrok\.io/
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
