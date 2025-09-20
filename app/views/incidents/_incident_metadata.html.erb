@@ -1,0 +1,12 @@
+<!-- Incident Info -->
+<div class="mt-6 bg-gray-50 rounded-lg p-4">
+  <div class="text-sm text-gray-600 space-y-1">
+    <div><strong>Created:</strong> <%= incident.created_at.strftime("%B %d, %Y at %I:%M %p") %></div>
+    <% if incident.acknowledged_at.present? %>
+      <div><strong>Acknowledged:</strong> <%= incident.acknowledged_at.strftime("%B %d, %Y at %I:%M %p") %></div>
+    <% end %>
+    <% if incident.resolved_at.present? %>
+      <div><strong>Resolved:</strong> <%= incident.resolved_at.strftime("%B %d, %Y at %I:%M %p") %></div>
+    <% end %>
+  </div>
+</div>

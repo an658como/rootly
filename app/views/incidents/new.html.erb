@@ -17,88 +17,16 @@
     <div class="bg-white shadow rounded-lg">
       <div class="px-6 py-8">
         <%= form_with model: @incident, local: true, class: "space-y-6" do |form| %>
-          <% if @incident.errors.any? %>
-            <div class="rounded-md bg-red-50 p-4">
-              <div class="flex">
-                <div class="flex-shrink-0">
-                  <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                  </svg>
-                </div>
-                <div class="ml-3">
-                  <h3 class="text-sm font-medium text-red-800">Please fix the following errors:</h3>
-                  <div class="mt-2 text-sm text-red-700">
-                    <ul class="list-disc pl-5 space-y-1">
-                      <% @incident.errors.full_messages.each do |message| %>
-                        <li><%= message %></li>
-                      <% end %>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          <% end %>
-
-          <!-- Title -->
-          <div>
-            <%= form.label :title, class: "block text-sm font-medium text-gray-700" %>
-            <%= form.text_field :title, 
-                class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
-                placeholder: "Brief description of the incident" %>
-          </div>
-
-          <!-- Description -->
-          <div>
-            <%= form.label :description, class: "block text-sm font-medium text-gray-700" %>
-            <%= form.text_area :description, 
-                rows: 4,
-                class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
-                placeholder: "Detailed description of what happened, impact, and any relevant information..." %>
-          </div>
-
-          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <!-- Severity -->
-            <div>
-              <%= form.label :severity, class: "block text-sm font-medium text-gray-700" %>
-              <%= form.select :severity, 
-                  options_for_select([
-                    ['Low - Minor issue', 'low'],
-                    ['Medium - Moderate impact', 'medium'],
-                    ['High - Significant impact', 'high'],
-                    ['Critical - System down', 'critical']
-                  ], @incident.severity),
-                  { prompt: 'Select severity level' },
-                  { class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" } %>
-            </div>
-
-            <!-- Status -->
-            <div>
-              <%= form.label :status, class: "block text-sm font-medium text-gray-700" %>
-              <%= form.select :status,
-                  options_for_select([
-                    ['Open - Needs attention', 'open'],
-                    ['Investigating - Being worked on', 'investigating']
-                  ], @incident.status || 'open'),
-                  {},
-                  { class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" } %>
-            </div>
-          </div>
-
-          <!-- Created By -->
-          <div>
-            <%= form.label :created_by, "Reported by", class: "block text-sm font-medium text-gray-700" %>
-            <%= form.email_field :created_by,
-                class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
-                placeholder: "your.email@company.com" %>
-          </div>
-
-          <!-- Assigned To (Optional) -->
-          <div>
-            <%= form.label :assigned_to, "Assign to (optional)", class: "block text-sm font-medium text-gray-700" %>
-            <%= form.email_field :assigned_to,
-                class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm",
-                placeholder: "assignee@company.com" %>
-          </div>
+          <%= render 'form_errors', incident: @incident %>
+          
+          <%= render 'incident_form_fields', 
+              form: form, 
+              incident: @incident, 
+              show_prompt: true,
+              status_options: [
+                ['Open - Needs attention', 'open'],
+                ['Investigating - Being worked on', 'investigating']
+              ] %>
 
           <!-- Actions -->
           <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
