@@ -145,28 +145,6 @@ Incident.create!(
 - **High**: Significant impact
 - **Critical**: System down or major outage
 
-## 🔧 Development Phases
-
-### ✅ Phase 1: Core Rails App (Complete)
-
-- Rails 7 setup with Hotwire
-- Incident model with enums and validations
-- Full CRUD operations (Create, Read, Update, Delete)
-- Beautiful Tailwind CSS dashboard
-- Quick actions (Acknowledge, Resolve)
-
-### 🔄 Phase 2: Real-time Updates (Next)
-
-- Action Cable integration
-- Turbo Streams for live updates
-- Real-time incident status changes
-
-### 🤖 Phase 3: Slack Integration (Planned)
-
-- Slack bot setup
-- `/rootly incident <title>` command
-- `/rootly resolve <incident_id>` command
-
 ## 🐛 Troubleshooting
 
 ### Port Conflicts
@@ -358,14 +336,156 @@ curl -X POST https://YOUR_NGROK_URL.ngrok-free.app/api/slack/interactive \
   -d 'payload={"type":"view_submission","view":{"callback_id":"incident_declaration","state":{"values":{"incident_title":{"title_input":{"value":"Test Incident"}},"incident_description":{"description_input":{"value":"Testing Slack integration"}},"incident_severity":{"severity_select":{"selected_option":{"value":"high"}}}}},"private_metadata":"{\"user_id\":\"U123\",\"user_name\":\"test.user\",\"original_channel\":\"C123\"}"}}'
 ```
 
-## 🤝 Contributing
+## 🏗️ Design Choices & Architecture
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+### Why Turbo Streams?
 
-## 📄 License
+**Real-time Updates Without JavaScript Complexity**
 
-This project is licensed under the MIT License.
+We chose Turbo Streams over traditional JavaScript frameworks (React, Vue) for several key reasons:
+
+1. **Server-Side Rendering First**: Turbo Streams allow us to maintain Rails' strength in server-side rendering while adding real-time capabilities
+2. **Minimal JavaScript**: No complex state management or virtual DOM - just HTML over the wire
+3. **Progressive Enhancement**: The app works perfectly without JavaScript, then enhances with real-time features
+4. **Rails Integration**: Native integration with Action Cable and Rails broadcasting makes real-time updates trivial
+5. **Performance**: Sending targeted HTML fragments is more efficient than full JSON API responses + client-side rendering
+
+**Example**: When an incident is created via Slack, Turbo Streams automatically:
+
+- Prepends the new incident card to all open dashboards
+- Updates the statistics counters
+- No page refresh needed, no complex state synchronization
+
+### Why Tailwind CSS?
+
+**Utility-First Styling for Rapid Development**
+
+1. **Rapid Prototyping**: Build beautiful interfaces quickly without writing custom CSS
+2. **Consistency**: Design system built into the utility classes ensures visual consistency
+3. **Maintainability**: No CSS files to maintain, styles are co-located with HTML
+4. **Responsive Design**: Built-in responsive utilities make mobile-first design easy
+5. **Performance**: Only the CSS you use gets included in the final bundle
+6. **Team Productivity**: Designers and developers can work with the same utility vocabulary
+
+**Example**: Our incident cards use Tailwind classes like `bg-white shadow rounded-lg hover:shadow-lg transition-shadow` for consistent, interactive design without custom CSS.
+
+### Dual Controller Architecture
+
+**Why We Have Separate Controllers for Web UI and Slack API**
+
+#### 1. **Separation of Concerns**
+
+**Web Controllers** (`IncidentsController`):
+
+- Handle HTML responses and redirects
+- Manage user sessions and authentication
+- Provide full CRUD operations with rich UI
+- Handle form validations with user-friendly error messages
+- Support Turbo Frame navigation
+
+**API Controllers** (`Api::IncidentsController`, `Api::SlackController`):
+
+- Handle JSON responses only
+- Stateless operations (no sessions)
+- Focused on data exchange
+- Slack-specific authentication (signature verification)
+- Webhook-optimized response formats
+
+#### 2. **Different Response Formats**
+
+```ruby
+# Web Controller - Rich HTML responses
+def create
+  if @incident.save
+    redirect_to incidents_path, notice: "Incident created successfully"
+  else
+    render :new, status: :unprocessable_entity
+  end
+end
+
+# API Controller - JSON responses
+def create
+  if incident.save
+    render_json_success({ incident: incident.as_json }, message: "Created successfully")
+  else
+    render_json_error(incident.errors.full_messages.join(", "))
+  end
+end
+```
+
+#### 3. **Different Authentication Models**
+
+- **Web**: Cookie-based sessions, CSRF protection
+- **Slack API**: Signature verification, stateless tokens
+
+#### 4. **Different Error Handling**
+
+- **Web**: User-friendly error pages, form validation highlights
+- **API**: Structured JSON error responses, HTTP status codes
+
+#### 5. **Different Performance Requirements**
+
+- **Web**: Can afford richer responses, multiple database queries for better UX
+- **API**: Must respond quickly to avoid Slack timeouts, optimized for webhook constraints
+
+### Action Cable + Turbo Streams Integration
+
+**Real-time Bi-directional Updates**
+
+```ruby
+# Model broadcasts changes automatically
+after_create_commit :broadcast_incident_created
+after_update_commit :broadcast_incident_updated
+
+def broadcast_incident_created
+  broadcast_prepend_to "incidents",
+    partial: "incidents/incident_card",
+    locals: { incident: self }
+end
+```
+
+This architecture enables:
+
+- **Slack → Web**: Incidents created in Slack appear instantly on web dashboards
+- **Web → Slack**: Status changes in web UI could trigger Slack notifications (future feature)
+- **Multi-user**: All connected users see updates in real-time
+
+### Database Design Choices
+
+**Slack Integration Fields**
+
+We added Slack-specific fields to the main `incidents` table rather than separate tables:
+
+```ruby
+# Slack integration fields
+t.string :slack_channel_id      # For API calls
+t.string :slack_channel_name    # For user display
+t.string :declared_by           # Slack username
+t.string :slack_message_ts      # For threading
+```
+
+**Why not separate tables?**
+
+1. **Simplicity**: Most incidents will have Slack integration
+2. **Performance**: Avoids joins for common queries
+3. **Atomic Operations**: Incident + Slack data updated together
+4. **Rails Conventions**: Single model, single responsibility
+
+### Technology Stack Rationale
+
+| Technology       | Why Chosen                                          | Alternative Considered   |
+| ---------------- | --------------------------------------------------- | ------------------------ |
+| **Rails 7**      | Mature, productive, great for rapid development     | FastAPI, Django, Express |
+| **Hotwire**      | Rails-native, minimal JS, progressive enhancement   | React SPA, Vue.js        |
+| **Tailwind**     | Utility-first, rapid development, consistent design | Bootstrap, custom CSS    |
+| **PostgreSQL**   | Robust, great Rails support, JSON fields            | MySQL, SQLite            |
+| **Action Cable** | Native Rails WebSocket, integrates with Turbo       | Socket.io, Pusher        |
+| **Docker**       | Consistent dev environment, easy deployment         | Native installation      |
+
+### Scalability Considerations
+
+**Current Architecture Supports**:
+
+- Multiple concurrent users (Action Cable handles WebSocket connections)
+- High read loads (database indexing on incident_number, status, created_at)
+- Slack rate limits (error handling and retries built-in)
