@@ -120,15 +120,14 @@ class Incident < ApplicationRecord
 
     # Generate format: INC-YYYY-XXX (e.g., INC-2024-001)
     year = Date.current.year
-    last_incident = Incident.where("incident_number LIKE ?", "INC-#{year}-%").order(:incident_number).last
-
-    if last_incident
-      last_number = last_incident.incident_number.split("-").last.to_i
-      next_number = last_number + 1
-    else
-      next_number = 1
-    end
-
+    
+    # Find the highest numeric incident number for this year
+    highest_number = Incident.where("incident_number LIKE ?", "INC-#{year}-%")
+                            .pluck(:incident_number)
+                            .map { |num| num.split("-").last.to_i }
+                            .max || 0
+    
+    next_number = highest_number + 1
     self.incident_number = "INC-#{year}-#{next_number.to_s.rjust(3, '0')}"
   end
 

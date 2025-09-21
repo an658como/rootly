@@ -53,7 +53,7 @@ class SlackIncidentService
     if incident_number.blank?
       Rails.logger.error "Could not extract incident number from channel: #{channel_name}"
       return ServiceResponse.failure(
-        message: "❌ Could not determine incident number from channel name: #{channel_name}"
+        message: "❌ This command can only be used in incident channels (e.g., #incident-inc-2025-001). Current channel: ##{channel_name}"
       )
     end
 
@@ -121,12 +121,13 @@ class SlackIncidentService
 
   def extract_incident_number_from_channel(channel_name)
     # Extract INC-YYYY-XXX from #incident-inc-yyyy-xxx
-    match = channel_name.match(/incident-(.+)/)
+    # Only match channels that follow the incident naming pattern
+    match = channel_name.match(/incident-(inc-\d{4}-\d{3,4})/)
     return nil unless match
 
     incident_slug = match[1]
     # Convert inc-2025-001 to INC-2025-001
-    incident_slug.upcase.gsub("-", "-")
+    incident_slug.upcase
   end
 
   def time_duration_in_words(start_time, end_time)

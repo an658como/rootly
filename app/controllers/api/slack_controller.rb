@@ -11,7 +11,7 @@ class Api::SlackController < Api::BaseController
     response = command_handler.handle
 
     # Convert ServiceResponse to Slack-compatible format
-    slack_response = response.is_a?(ServiceResponse) ? response.to_slack_response : response
+    slack_response =  response.to_slack_response
     render json: slack_response, status: :ok
   end
 
@@ -73,7 +73,7 @@ class Api::SlackController < Api::BaseController
     response = modal_service.handle_modal_submission(payload)
 
     # Convert ServiceResponse to Slack-compatible format
-    slack_response = response.is_a?(ServiceResponse) ? response.to_slack_response : response
+    slack_response = response.to_slack_response
     render json: slack_response, status: :ok
   end
 

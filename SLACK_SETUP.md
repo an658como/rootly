@@ -86,138 +86,44 @@ You can find these values in your Slack app settings:
 - **Signing Secret**: Basic Information → App Credentials → Signing Secret
 - **Client ID & Secret**: Basic Information → App Credentials
 
-## Step 7: Update Your Rails App
+## Step 7: Test Your Integration
 
-1. **Add the slack-ruby-client gem** (already done):
+Once your app is deployed and environment variables are set, test the integration:
 
-   ```ruby
-   gem 'slack-ruby-client'
-   ```
+### 1. Test Slash Command
 
-2. **Create a Slack service class** (optional, for better organization):
+- In any Slack channel, type: `/rootly declare Test Incident`
+- Verify the modal opens with the incident form
+- Fill out the form and submit
+- Check that the incident is created successfully
 
-   ```ruby
-   # app/services/slack_service.rb
-   class SlackService
-     def initialize
-       @client = Slack::Web::Client.new(token: ENV['SLACK_BOT_TOKEN'])
-     end
+### 2. Test Channel Creation
 
-     def create_channel(name, purpose = nil)
-       @client.conversations_create(name: name, is_private: false)
-     end
+- After declaring an incident, verify:
+  - A new channel is created (e.g., `#incident-inc-2025-xxx`)
+  - You are automatically invited to the channel
+  - The incident summary is posted in the channel
 
-     def post_message(channel, text: nil, blocks: nil)
-       @client.chat_postMessage(channel: channel, text: text, blocks: blocks)
-     end
-   end
-   ```
+### 3. Test Resolve Command
 
-3. **Update the Slack controller** to use real API calls:
+- In an incident channel, type: `/rootly resolve`
+- Verify the incident is marked as resolved
+- Check that a confirmation message is displayed
 
-   ```ruby
-   # In app/controllers/api/slack_controller.rb
-   def create_incident_channel(incident, user_name)
-     slack_service = SlackService.new
-     channel_name = "incident-#{incident.incident_number.downcase}"
+### 4. Verify Logs
 
-     begin
-       response = slack_service.create_channel(channel_name)
-       {
-         success: true,
-         channel_id: response.channel.id,
-         channel_name: channel_name
-       }
-     rescue Slack::Web::Api::Errors::SlackError => e
-       Rails.logger.error "Slack API Error: #{e.message}"
-       { success: false, error: e.message }
-     end
-   end
-   ```
+Check your Rails application logs for any errors:
 
-## Step 8: Test Your Integration
+```bash
+# Monitor logs for Slack webhook requests
+tail -f log/production.log | grep -i slack
+```
 
-1. **Test slash commands**:
+### 5. Common Test Cases
 
-   ```
-   /rootly declare Database is down
-   /rootly resolve
-   /rootly help
-   ```
+- **Valid incident creation**: Title, description, severity selection
+- **Empty title**: Should show validation error
+- **Resolve non-existent incident**: Should show "incident not found"
+- **Resolve already resolved incident**: Should show "already resolved"
 
-2. **Verify functionality**:
-   - ✅ Modal opens for incident declaration
-   - ✅ Incident is created in your Rails app
-   - ✅ Dedicated channel is created
-   - ✅ Incident summary is posted to channel
-   - ✅ Resolution works in incident channels
-
-## Step 9: Deploy to Production
-
-1. **HTTPS Required**: Slack requires HTTPS for all webhook URLs
-2. **Environment Variables**: Set all required environment variables
-3. **Update URLs**: Update all Slack app URLs to your production domain
-4. **Test Thoroughly**: Test all functionality in your production Slack workspace
-
-## Troubleshooting
-
-### Common Issues
-
-1. **"URL verification failed"**
-
-   - Ensure your app is accessible via HTTPS
-   - Check that the endpoint returns a 200 status
-   - Verify the request signature validation
-
-2. **"Missing scope" errors**
-
-   - Review the required scopes in Step 2
-   - Reinstall the app to workspace after adding scopes
-
-3. **Signature verification fails**
-
-   - Ensure `SLACK_SIGNING_SECRET` is correctly set
-   - Check that you're using the raw request body
-   - Verify timestamp is within 5 minutes
-
-4. **Bot can't create channels**
-   - Ensure `channels:manage` scope is added
-   - Check that the bot is installed to the workspace
-   - Verify the bot token is valid
-
-### Useful Slack API Documentation
-
-- [Slack API Documentation](https://api.slack.com/web)
-- [Block Kit Builder](https://app.slack.com/block-kit-builder) - Design rich messages
-- [Slack Ruby Client](https://github.com/slack-ruby/slack-ruby-client) - Ruby gem docs
-
-## Security Considerations
-
-1. **Always verify request signatures** in production
-2. **Use HTTPS** for all webhook URLs
-3. **Store tokens securely** using environment variables
-4. **Implement rate limiting** to prevent abuse
-5. **Log security events** for monitoring
-
-## Next Steps
-
-Once your Slack integration is working:
-
-1. **Add more commands** (e.g., `/rootly status`, `/rootly assign`)
-2. **Implement user mentions** and notifications
-3. **Add incident templates** for common scenarios
-4. **Create incident reports** and analytics
-5. **Set up monitoring** and alerting for the integration
-
----
-
-## Support
-
-If you need help with the Slack integration:
-
-1. Check the Rails logs for error messages
-2. Use Slack's [API Tester](https://api.slack.com/methods) to test API calls
-3. Review the [Slack API documentation](https://api.slack.com/)
-4. Test with a simple curl command to isolate issues
-
-Happy incident management! 🚨✨
+If any tests fail, check your environment variables and Slack app configuration.
