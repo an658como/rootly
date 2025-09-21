@@ -37,6 +37,8 @@ gem "redis", ">= 4.0.1"
 gem "slack-ruby-client"
 gem "sinatra", require: false  # For Slack webhook endpoints
 
+gem "dotenv-rails", groups: [ :development, :test ]
+
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 
