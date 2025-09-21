@@ -236,7 +236,7 @@ class Api::SlackController < Api::BaseController
         success_message = build_incident_created_message(incident, user_name)
 
         # Create Slack channel for the incident
-        channel_result = create_incident_channel(incident, user_name)
+        channel_result = create_incident_channel(incident, user_name, user_id)
 
         if channel_result[:success]
           # Update incident with channel info
@@ -256,6 +256,8 @@ class Api::SlackController < Api::BaseController
           success_message = "🎉 *Incident #{incident.incident_number} created successfully!*\n" \
                            "📋 #{incident.title}\n" \
                            "📊 Severity: #{incident.severity.humanize}\n" \
+                           "💬 Channel: ##{channel_result[:channel_name]}\n" \
+                           "👤 You've been added to the incident channel\n" \
                            "🔗 View in dashboard: #{dashboard_incident_url(incident)}"
 
           # Get the original channel from private metadata
@@ -491,7 +493,7 @@ class Api::SlackController < Api::BaseController
     "#{channel_info}"
   end
 
-  def create_incident_channel(incident, user_name)
+  def create_incident_channel(incident, user_name, user_id = nil)
     # Generate channel name: incident-inc-2025-001
     channel_name = "incident-#{incident.incident_number.downcase}"
 
@@ -504,11 +506,30 @@ class Api::SlackController < Api::BaseController
         is_private: false
       )
 
-      Rails.logger.info "✅ Created Slack channel: ##{channel_name} (#{response.channel.id})"
+      channel_id = response.channel.id
+      Rails.logger.info "✅ Created Slack channel: ##{channel_name} (#{channel_id})"
+
+      # Invite the user who declared the incident to the channel
+      if user_id.present?
+        begin
+          slack_client.conversations_invite(
+            channel: channel_id,
+            users: user_id
+          )
+          Rails.logger.info "✅ Invited user #{user_name} (#{user_id}) to channel ##{channel_name}"
+        rescue Slack::Web::Api::Errors::SlackError => e
+          if e.message == "cant_invite_self"
+            Rails.logger.info "ℹ️ User #{user_name} (#{user_id}) is the bot itself - already in channel"
+          else
+            Rails.logger.warn "⚠️ Failed to invite user to channel: #{e.message}"
+          end
+          # Don't fail the entire operation if user invitation fails
+        end
+      end
 
       {
         success: true,
-        channel_id: response.channel.id,
+        channel_id: channel_id,
         channel_name: channel_name,
         message: "Channel ##{channel_name} created successfully"
       }
