@@ -4,9 +4,10 @@ class IncidentsController < ApplicationController
   before_action :set_incident, only: [ :show, :edit, :update, :destroy ]
 
   def index
-    @incidents = Incident.recent
+    @incidents = apply_sorting(Incident.all)
     @unresolved_count = Incident.unresolved.count
     @total_count = Incident.count
+    @current_sort = params[:sort] || "created_at_desc"
   end
 
   def show
@@ -74,5 +75,28 @@ class IncidentsController < ApplicationController
 
   def json_request?
     request.format.json?
+  end
+
+  def apply_sorting(incidents)
+    case params[:sort]
+    when "title_asc"
+      incidents.order(:title)
+    when "title_desc"
+      incidents.order(title: :desc)
+    when "created_at_asc"
+      incidents.order(:created_at)
+    when "created_at_desc", nil
+      incidents.recent # Default to recent (created_at desc)
+    when "severity_asc"
+      incidents.order(:severity)
+    when "severity_desc"
+      incidents.order(severity: :desc)
+    when "status_asc"
+      incidents.order(:status)
+    when "status_desc"
+      incidents.order(status: :desc)
+    else
+      incidents.recent # Fallback to default
+    end
   end
 end
