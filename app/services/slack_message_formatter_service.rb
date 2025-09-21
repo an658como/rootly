@@ -113,5 +113,4 @@ class SlackMessageFormatterService
     else "⚪"
     end
   end
-
 end

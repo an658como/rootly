@@ -141,5 +141,4 @@ class SlackIncidentService
       "#{minutes}m"
     end
   end
-
 end

@@ -1,4 +1,4 @@
-require 'test_helper'
+require "test_helper"
 
 class SlackConfigurationServiceTest < ActiveSupport::TestCase
   test "returns bot token from environment" do
@@ -17,7 +17,7 @@ class SlackConfigurationServiceTest < ActiveSupport::TestCase
 
   test "generates correct dashboard incident URL" do
     incident = Incident.new(id: 123)
-    
+
     ENV.stub(:fetch, "https://example.com") do
       url = SlackConfigurationService.dashboard_incident_url(incident)
       assert_equal "https://example.com/incidents/123", url
@@ -59,7 +59,7 @@ class SlackConfigurationServiceTest < ActiveSupport::TestCase
     ENV.stub(:fetch, "false") do
       refute SlackConfigurationService.auto_invite_enabled?
     end
-    
+
     ENV.stub(:fetch, "true") do
       assert SlackConfigurationService.auto_invite_enabled?
     end

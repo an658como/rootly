@@ -58,7 +58,7 @@ class SlackConfigurationService
 
     # Slack client factory
     def slack_client
-      require 'slack-ruby-client'
+      require "slack-ruby-client"
       Slack::Web::Client.new(
         token: bot_token,
         timeout: request_timeout

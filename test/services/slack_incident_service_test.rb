@@ -1,4 +1,4 @@
-require 'test_helper'
+require "test_helper"
 
 class SlackIncidentServiceTest < ActiveSupport::TestCase
   def setup
@@ -15,7 +15,7 @@ class SlackIncidentServiceTest < ActiveSupport::TestCase
     @mock_channel_service.expect(
       :create_incident_channel,
       { success: true, channel_id: "C123", channel_name: "incident-inc-2025-001" },
-      [Incident, "testuser", "U123"]
+      [ Incident, "testuser", "U123" ]
     )
 
     # Mock message posting (if enabled)
@@ -23,7 +23,7 @@ class SlackIncidentServiceTest < ActiveSupport::TestCase
       @mock_message_service.expect(
         :post_incident_summary_to_channel,
         true,
-        [Incident, "C123"]
+        [ Incident, "C123" ]
       )
     end
 

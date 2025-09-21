@@ -52,7 +52,7 @@ class SlackChannelService
   def invite_user_to_channel(channel_id, user_id, user_name, channel_name)
     begin
       slack_client = SlackConfigurationService.slack_client
-      
+
       slack_client.conversations_invite(
         channel: channel_id,
         users: user_id
