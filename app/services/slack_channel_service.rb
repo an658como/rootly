@@ -1,11 +1,11 @@
 class SlackChannelService
   def create_incident_channel(incident, user_name, user_id = nil)
-    # Generate channel name: incident-inc-2025-001
-    channel_name = "incident-#{incident.incident_number.downcase}"
+    # Generate channel name using configuration
+    channel_name = SlackConfigurationService.incident_channel_name(incident.incident_number)
 
     begin
       # Create actual Slack channel using the API
-      slack_client = Slack::Web::Client.new(token: ENV["SLACK_BOT_TOKEN"])
+      slack_client = SlackConfigurationService.slack_client
 
       response = slack_client.conversations_create(
         name: channel_name,
@@ -15,8 +15,8 @@ class SlackChannelService
       channel_id = response.channel.id
       Rails.logger.info "✅ Created Slack channel: ##{channel_name} (#{channel_id})"
 
-      # Invite the user who declared the incident to the channel
-      if user_id.present?
+      # Invite the user who declared the incident to the channel (if feature enabled)
+      if user_id.present? && SlackConfigurationService.auto_invite_enabled?
         invite_user_to_channel(channel_id, user_id, user_name, channel_name)
       end
 
@@ -51,7 +51,7 @@ class SlackChannelService
 
   def invite_user_to_channel(channel_id, user_id, user_name, channel_name)
     begin
-      slack_client = Slack::Web::Client.new(token: ENV["SLACK_BOT_TOKEN"])
+      slack_client = SlackConfigurationService.slack_client
       
       slack_client.conversations_invite(
         channel: channel_id,

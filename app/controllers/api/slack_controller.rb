@@ -10,7 +10,9 @@ class Api::SlackController < Api::BaseController
     command_handler = SlackCommandHandlerService.new(params)
     response = command_handler.handle
 
-    render json: response, status: :ok
+    # Convert ServiceResponse to Slack-compatible format
+    slack_response = response.is_a?(ServiceResponse) ? response.to_slack_response : response
+    render json: slack_response, status: :ok
   end
 
   # POST /api/slack/interactive
@@ -70,7 +72,9 @@ class Api::SlackController < Api::BaseController
     modal_service = SlackModalService.new
     response = modal_service.handle_modal_submission(payload)
 
-    render json: response, status: :ok
+    # Convert ServiceResponse to Slack-compatible format
+    slack_response = response.is_a?(ServiceResponse) ? response.to_slack_response : response
+    render json: slack_response, status: :ok
   end
 
   def handle_block_actions(payload)

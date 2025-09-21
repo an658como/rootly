@@ -1,4 +1,9 @@
 class SlackIncidentService
+  def initialize(channel_service: nil, message_service: nil)
+    @channel_service = channel_service || SlackChannelService.new
+    @message_service = message_service || SlackMessageFormatterService.new
+  end
+
   def create_incident(title:, description:, severity:, user_id:, user_name:, original_channel:)
     # Create the incident
     incident = Incident.new(
@@ -12,8 +17,7 @@ class SlackIncidentService
 
     if incident.save
       # Success - incident created
-      channel_service = SlackChannelService.new
-      channel_result = channel_service.create_incident_channel(incident, user_name, user_id)
+      channel_result = @channel_service.create_incident_channel(incident, user_name, user_id)
 
       if channel_result[:success]
         # Update incident with channel info
@@ -22,25 +26,23 @@ class SlackIncidentService
           slack_channel_name: channel_result[:channel_name]
         )
 
-        # Post incident summary to the channel
-        message_service = SlackMessageFormatterService.new
-        message_service.post_incident_summary_to_channel(incident, channel_result[:channel_id])
+        # Post incident summary to the channel (if feature enabled)
+        if SlackConfigurationService.incident_summary_enabled?
+          @message_service.post_incident_summary_to_channel(incident, channel_result[:channel_id])
+        end
       end
 
       # Send a success message to the user via chat.postEphemeral
       send_success_message(incident, user_id, user_name, original_channel, channel_result)
 
-      { success: true, incident: incident }
+      ServiceResponse.success({ incident: incident }, message: "Incident created successfully")
     else
       # Error - validation failed
-      {
-        success: false,
-        errors: {
-          "incident_title" => incident.errors[:title].first || "",
-          "incident_description" => incident.errors[:description].first || "",
-          "incident_severity" => incident.errors[:severity].first || ""
-        }
-      }
+      ServiceResponse.failure({
+        "incident_title" => incident.errors[:title].first || "",
+        "incident_description" => incident.errors[:description].first || "",
+        "incident_severity" => incident.errors[:severity].first || ""
+      }, message: "Failed to create incident: #{incident.errors.full_messages.join(', ')}")
     end
   end
 
@@ -50,9 +52,9 @@ class SlackIncidentService
 
     if incident_number.blank?
       Rails.logger.error "Could not extract incident number from channel: #{channel_name}"
-      return {
-        text: "❌ Could not determine incident number from channel name: #{channel_name}"
-      }
+      return ServiceResponse.failure(
+        message: "❌ Could not determine incident number from channel name: #{channel_name}"
+      )
     end
 
     Rails.logger.info "Extracted incident number: #{incident_number} from channel: #{channel_name}"
@@ -62,15 +64,16 @@ class SlackIncidentService
 
     if incident.nil?
       Rails.logger.error "Incident not found: #{incident_number}. Available incidents: #{Incident.pluck(:incident_number).join(', ')}"
-      return {
-        text: "❌ Incident #{incident_number} not found. Available incidents: #{Incident.pluck(:incident_number).join(', ')}"
-      }
+      return ServiceResponse.failure(
+        message: "❌ Incident #{incident_number} not found. Available incidents: #{Incident.pluck(:incident_number).join(', ')}"
+      )
     end
 
     if incident.resolved?
-      return {
-        text: "✅ Incident #{incident_number} is already resolved"
-      }
+      return ServiceResponse.success(
+        { incident: incident },
+        message: "✅ Incident #{incident_number} is already resolved"
+      )
     end
 
     # Resolve the incident
@@ -79,31 +82,32 @@ class SlackIncidentService
     # Calculate resolution time
     resolution_time = time_duration_in_words(incident.created_at, incident.resolved_at)
 
-    {
-      text: "🎉 *Incident #{incident_number} Resolved*\n" \
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" \
-            "📋 #{incident.title}\n" \
-            "⏱️ Total time: #{resolution_time}\n" \
-            "👤 Resolved by: @#{user_name}\n" \
-            "📊 Impact: #{incident.severity.humanize} severity\n" \
-            "🔄 Status: #{incident.status.humanize}\n" \
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" \
-            "View in dashboard: #{dashboard_incident_url(incident)}"
-    }
+    ServiceResponse.success(
+      { incident: incident, resolution_time: resolution_time },
+      message: "🎉 *Incident #{incident_number} Resolved*\n" \
+               "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" \
+               "📋 #{incident.title}\n" \
+               "⏱️ Total time: #{resolution_time}\n" \
+               "👤 Resolved by: @#{user_name}\n" \
+               "📊 Impact: #{incident.severity.humanize} severity\n" \
+               "🔄 Status: #{incident.status.humanize}\n" \
+               "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" \
+               "View in dashboard: #{SlackConfigurationService.dashboard_incident_url(incident)}"
+    )
   end
 
   private
 
   def send_success_message(incident, user_id, user_name, original_channel, channel_result)
     begin
-      slack_client = Slack::Web::Client.new(token: ENV["SLACK_BOT_TOKEN"])
+      slack_client = SlackConfigurationService.slack_client
 
       success_message = "🎉 *Incident #{incident.incident_number} created successfully!*\n" \
                        "📋 #{incident.title}\n" \
                        "📊 Severity: #{incident.severity.humanize}\n" \
                        "💬 Channel: ##{channel_result[:channel_name]}\n" \
                        "👤 You've been added to the incident channel\n" \
-                       "🔗 View in dashboard: #{dashboard_incident_url(incident)}"
+                       "🔗 View in dashboard: #{SlackConfigurationService.dashboard_incident_url(incident)}"
 
       slack_client.chat_postEphemeral(
         channel: original_channel,
@@ -137,8 +141,4 @@ class SlackIncidentService
     end
   end
 
-  def dashboard_incident_url(incident)
-    # This would generate the full URL to the incident in the dashboard
-    "http://localhost:3000/incidents/#{incident.id}"
-  end
 end

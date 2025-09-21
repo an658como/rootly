@@ -1,11 +1,15 @@
 class SlackModalService
+  def initialize(incident_service: nil)
+    @incident_service = incident_service || SlackIncidentService.new
+  end
+
   def open_incident_modal(trigger_id:, title:, user_id:, user_name:, channel_id:)
     # Build the modal view
     modal_view = build_incident_modal(title, user_id, user_name, channel_id)
 
     # Open the modal using Slack API
     begin
-      slack_client = Slack::Web::Client.new(token: ENV["SLACK_BOT_TOKEN"])
+      slack_client = SlackConfigurationService.slack_client
 
       response = slack_client.views_open(
         trigger_id: trigger_id,
@@ -13,33 +17,23 @@ class SlackModalService
       )
 
       # Return empty response (modal opened successfully)
-      {}
+      ServiceResponse.success({}, message: "Modal opened successfully")
 
     rescue Slack::Web::Api::Errors::SlackError => e
       Rails.logger.error "Failed to open Slack modal: #{e.message}"
 
       # Fallback: show the modal preview
-      {
-        text: "🚨 Incident declaration for: *#{title}*",
-        response_type: "ephemeral",
-        attachments: [
-          {
-            color: "warning",
-            text: "Modal would open here (Slack API error: #{e.message}):",
-            fields: [
-              { title: "Title", value: title, short: true },
-              { title: "Severity", value: "Medium (default)", short: true },
-              { title: "Description", value: "Optional field", short: false }
-            ]
-          }
-        ]
-      }
+      ServiceResponse.failure(
+        { slack_error: e.message },
+        message: "🚨 Incident declaration for: *#{title}*\n\nModal would open here (Slack API error: #{e.message})"
+      )
     rescue => e
       Rails.logger.error "Unexpected error opening modal: #{e.message}"
 
-      {
-        text: "❌ Error opening modal: #{e.message}"
-      }
+      ServiceResponse.failure(
+        { error: e.message },
+        message: "❌ Error opening modal: #{e.message}"
+      )
     end
   end
 
@@ -59,8 +53,7 @@ class SlackModalService
     original_channel = private_metadata["original_channel"]
 
     # Use SlackIncidentService to create the incident
-    incident_service = SlackIncidentService.new
-    result = incident_service.create_incident(
+    result = @incident_service.create_incident(
       title: title,
       description: description,
       severity: severity,
@@ -69,17 +62,12 @@ class SlackModalService
       original_channel: original_channel
     )
 
-    if result[:success]
+    if result.success?
       # For modal submissions, just clear the modal
-      {
-        response_action: "clear"
-      }
+      ServiceResponse.success({ response_action: "clear" })
     else
       # Error - validation failed
-      {
-        response_action: "errors",
-        errors: result[:errors]
-      }
+      ServiceResponse.failure(result.errors, message: result.message)
     end
   end
 

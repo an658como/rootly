@@ -5,7 +5,7 @@ class SlackMessageFormatterService
 
     begin
       # Post actual message to Slack channel
-      slack_client = Slack::Web::Client.new(token: ENV["SLACK_BOT_TOKEN"])
+      slack_client = SlackConfigurationService.slack_client
 
       response = slack_client.chat_postMessage(
         channel: channel_id,
@@ -28,7 +28,7 @@ class SlackMessageFormatterService
     channel_info = if incident.slack_channel_name.present?
       "💬 Dedicated channel: ##{incident.slack_channel_name}"
     else
-      "💬 Dedicated channel: #incident-#{incident.incident_number.downcase} (creating...)"
+      "💬 Dedicated channel: ##{SlackConfigurationService.incident_channel_name(incident.incident_number)} (creating...)"
     end
 
     "🎉 *Incident #{incident.incident_number} Created Successfully*\n" \
@@ -38,7 +38,7 @@ class SlackMessageFormatterService
     "👤 Declared by: @#{user_name}\n" \
     "🔄 Status: #{incident.status.humanize}\n" \
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" \
-    "📱 View in dashboard: #{dashboard_incident_url(incident)}\n" \
+    "📱 View in dashboard: #{SlackConfigurationService.dashboard_incident_url(incident)}\n" \
     "#{channel_info}"
   end
 
@@ -89,7 +89,7 @@ class SlackMessageFormatterService
         type: "section",
         text: {
           type: "mrkdwn",
-          text: "📱 *<#{dashboard_incident_url(incident)}|View in Dashboard>*"
+          text: "📱 *<#{SlackConfigurationService.dashboard_incident_url(incident)}|View in Dashboard>*"
         }
       },
       {
@@ -114,8 +114,4 @@ class SlackMessageFormatterService
     end
   end
 
-  def dashboard_incident_url(incident)
-    # This would generate the full URL to the incident in the dashboard
-    "http://localhost:3000/incidents/#{incident.id}"
-  end
 end

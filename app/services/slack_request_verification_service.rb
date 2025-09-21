@@ -5,11 +5,10 @@ class SlackRequestVerificationService
 
   def verify!
     # In development/testing, skip verification
-    return true if Rails.env.development? || Rails.env.test?
+    return true unless SlackConfigurationService.signature_verification_enabled?
 
-    # Get Slack signing secret from environment
-    signing_secret = ENV["SLACK_SIGNING_SECRET"]
-    return false if signing_secret.blank?
+    # Get Slack signing secret from configuration
+    signing_secret = SlackConfigurationService.signing_secret
 
     # Get request timestamp and signature from headers
     timestamp = @request.headers["X-Slack-Request-Timestamp"]
@@ -18,7 +17,8 @@ class SlackRequestVerificationService
     return false if timestamp.blank? || signature.blank?
 
     # Check if request is too old (replay attack protection)
-    return false if (Time.current.to_i - timestamp.to_i).abs > 300 # 5 minutes
+    max_age = SlackConfigurationService.signature_max_age_seconds
+    return false if (Time.current.to_i - timestamp.to_i).abs > max_age
 
     # Get raw request body
     body = @request.raw_post
